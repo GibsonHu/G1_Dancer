@@ -12,8 +12,12 @@ dependencies = []
 [project.scripts]
 g1-dancer = "g1_dancer.cli:main"
 
-[tool.setuptools.packages.find]
-include = ["g1_dancer*"]
+[tool.setuptools]
+packages = ["g1_dancer", "desktop_app"]
+
+[tool.setuptools.package-dir]
+g1_dancer = "src/g1_dancer"
+desktop_app = "desktop_app"
 
 [tool.setuptools.package-data]
-g1_dancer = ["assets/*.png", "web/*"]
+desktop_app = ["assets/*.png", "web/*"]

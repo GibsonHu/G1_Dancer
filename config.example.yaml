@@ -7,4 +7,6 @@ listen_port: 8787
 dry_run: false
 max_upload_mb: 100
 audio_player: "auto"
-
+# "unitree" streams 16 kHz mono PCM to the G1 speaker through AudioClient.PlayStream.
+# "bluetooth" and "usb" use the development PC's selected system output device.
+audio_output: "bluetooth"

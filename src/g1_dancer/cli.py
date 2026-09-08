@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from . import bluetooth
-from .audio import AudioPlayer
+from .audio import create_audio_player
 from .config import Config, default_config_path, initialize_config, load_config
 from .player import RoutinePlayer
 from .remote import RemoteClient
@@ -56,7 +56,7 @@ def _seed(store: RoutineStore) -> None:
 def _components(config: Config):
     store = RoutineStore(config.root)
     robot = G1Robot(config.network_interface, config.dry_run)
-    audio = AudioPlayer(config.audio_player, config.dry_run)
+    audio = create_audio_player(config.audio_output, config.audio_player, config.network_interface, config.dry_run)
     return store, RoutinePlayer(store, robot, audio)
 
 
@@ -142,7 +142,7 @@ def main(argv: List[str] | None = None) -> int:
 
         if args.command == "gui":
             if args.classic:
-                from .gui import launch
+                from desktop_app.gui import launch
                 launch(args.url, args.ssh_target, args.ssh_port)
             else:
                 import webbrowser
@@ -176,7 +176,7 @@ def main(argv: List[str] | None = None) -> int:
             player.stop()
             _print_json(player.status())
         elif args.command == "serve":
-            serve(config, store, player)
+            serve(config, store, player, args.config)
         return 0
     except (Exception, KeyboardInterrupt) as exc:
         if isinstance(exc, KeyboardInterrupt):

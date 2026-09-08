@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 from urllib.parse import unquote, urlsplit
 
-from .config import Config
+from desktop_app import ASSET_DIR, WEB_DIR
+
+from .audio import create_audio_player
+from .config import Config, save_config
 from .library import Library
 from .motions import MOTIONS_BY_ID, public_motions
 from .player import BusyError, RoutinePlayer
@@ -21,7 +24,7 @@ def _json_bytes(value: Any) -> bytes:
     return json.dumps(value, separators=(",", ":")).encode("utf-8")
 
 
-def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer):
+def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer, config_path: Path | None = None):
     library = Library(store.root)
     class Handler(BaseHTTPRequestHandler):
         server_version = "G1Dancer/0.1"
@@ -75,14 +78,16 @@ def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer):
                     self._reply(200, player.status())
                 elif route == ("api", "motions"):
                     self._reply(200, {"motions": public_motions()})
+                elif route == ("api", "settings"):
+                    self._reply(200, {"audio_output": config.audio_output})
                 elif len(route) == 4 and route[:2] == ('api', 'routines') and route[3] == 'artwork':
                     self._bytes(*library.artwork(store.get(route[2])))
                 elif route == () or (len(route) == 1 and route[0] in ('index.html', 'app.js', 'style.css', 'manifest.webmanifest')):
                     name = route[0] if route else 'index.html'
-                    path = Path(__file__).parent / 'web' / name
+                    path = WEB_DIR / name
                     self._bytes(path.read_bytes(), mimetypes.guess_type(name)[0] or 'application/octet-stream')
                 elif len(route) == 2 and route[0] == 'assets' and route[1] in ('app_icon.png', 'dancer_1_blurred.png'):
-                    self._bytes((Path(__file__).parent / 'assets' / route[1]).read_bytes(), 'image/png')
+                    self._bytes((ASSET_DIR / route[1]).read_bytes(), 'image/png')
                 else:
                     self._reply(404, {"error": "not found"})
             except KeyError:
@@ -140,6 +145,25 @@ def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer):
 
         def do_PUT(self) -> None:
             route = self._route()
+            if route == ("api", "settings", "audio-output"):
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    if not 2 <= length <= 100:
+                        raise ValueError("Invalid audio output request")
+                    value = json.loads(self.rfile.read(length))
+                    output = value.get("audio_output") if isinstance(value, dict) else None
+                    if output not in {"unitree", "bluetooth", "usb"}:
+                        raise ValueError("audio_output must be unitree, bluetooth, or usb")
+                    player.set_audio(create_audio_player(
+                        output, config.audio_player, config.network_interface, config.dry_run
+                    ))
+                    config.audio_output = output
+                    if config_path is not None:
+                        save_config(config_path, config)
+                    self._reply(200, {"audio_output": config.audio_output})
+                except (ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:
+                    self._reply(400, {"error": str(exc)})
+                return
             if len(route) == 4 and route[:2] == ('api', 'routines') and route[3] == 'artwork':
                 try:
                     routine = store.get(route[2])
@@ -223,9 +247,9 @@ def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer):
     return Handler
 
 
-def serve(config: Config, store: RoutineStore, player: RoutinePlayer) -> None:
+def serve(config: Config, store: RoutineStore, player: RoutinePlayer, config_path: Path | None = None) -> None:
     address = (config.listen_host, config.listen_port)
-    server = ThreadingHTTPServer(address, make_handler(config, store, player))
+    server = ThreadingHTTPServer(address, make_handler(config, store, player, config_path))
     print(f"G1 Dancer listening on http://{address[0]}:{address[1]}")
     try:
         server.serve_forever()

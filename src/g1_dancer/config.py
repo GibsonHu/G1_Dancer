@@ -17,6 +17,7 @@ class Config:
     dry_run: bool = False
     max_upload_mb: int = 100
     audio_player: str = "auto"
+    audio_output: str = "bluetooth"
 
     @property
     def root(self) -> Path:
@@ -71,6 +72,16 @@ def initialize_config(path: Path, *, data_dir: str, interface: str, host: str, p
     config.root.joinpath("routines").mkdir(parents=True, exist_ok=True)
     config.root.joinpath("audio").mkdir(parents=True, exist_ok=True)
     return config
+
+
+def save_config(path: Path, config: Config) -> None:
+    """Persist the editable configuration without changing its file format."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    values = asdict(config)
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        path.write_text(_dump_yaml(values), encoding="utf-8")
+    else:
+        path.write_text(json.dumps(values, indent=2) + "\n", encoding="utf-8")
 
 
 _YAML_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")

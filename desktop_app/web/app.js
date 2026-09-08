@@ -5,7 +5,7 @@
   const demo = new URLSearchParams(location.search).has('demo');
   let address = localStorage.getItem('g1.address') || (native ? 'http://10.42.0.1:8787' : location.origin);
   let library = [], motions = [], selected = null, pendingMotion = null, filter = 'all', connected = false, busy = false, polling = false, robotBusy = false;
-  let status = {state:'idle', routine_id:null, robot_connected:false}, toastTimer;
+  let status = {state:'idle', routine_id:null, robot_connected:false}, audioOutput=localStorage.getItem('g1.audio-output')||'bluetooth', toastTimer;
   const events = [];
   const demoLibrary = ['Midnight motion','Electric soul','After hours','Golden groove','Neon steps','Slow orbit'].map((name,i) => ({id:'session-'+i,name:['Clap & Wave','Heart Greeting','Evening Flow','Golden Hour','Neon Shuffle','Slow Orbit'][i],song_title:name,audio:i===5?null:'track.mp3',artwork_url:null}));
   const demoMotions = [
@@ -54,7 +54,7 @@
     $('toggle').textContent=status.state==='playing'?'Ⅱ':'▶';$('toggle').setAttribute('aria-label',status.state==='playing'?'Pause dance':status.state==='paused'?'Resume dance':'Start dance');
     $('toggle').disabled=!connected||(!demo&&!status.robot_connected)||busy||(!active&&!selected);$('stop').disabled=!connected||(!active&&status.state!=='error');$('edit').disabled=!selected||busy;
   }
-  async function refresh(){try{if(demo){library=demoLibrary;motions=demoMotions;status={...status,robot_connected:false};}else{const [result,motionResult,latest]=await Promise.all([request('/api/routines'),request('/api/motions').catch(()=>({motions:[]})),request('/api/status')]);library=result.routines;motions=motionResult.motions;status=latest;}selected=library.find(r=>r.id===selected?.id)||library[0]||null;connection(true,status.robot_connected);renderCards();renderPlayer();log('Library refreshed: '+library.length+' dances');}catch(e){connection(false,false);toast('Could not connect. Join the G1 hotspot and check Settings.');renderCards();renderMotions();}}
+  async function refresh(){try{if(demo){library=demoLibrary;motions=demoMotions;status={...status,robot_connected:false};}else{const [result,motionResult,latest,settings]=await Promise.all([request('/api/routines'),request('/api/motions').catch(()=>({motions:[]})),request('/api/status'),request('/api/settings').catch(()=>({audio_output:audioOutput}))]);library=result.routines;motions=motionResult.motions;status=latest;setAudioOutput(settings.audio_output);}selected=library.find(r=>r.id===selected?.id)||library[0]||null;connection(true,status.robot_connected);renderCards();renderPlayer();log('Library refreshed: '+library.length+' dances');}catch(e){connection(false,false);toast('Could not connect. Join the G1 hotspot and check Settings.');renderCards();renderMotions();}}
   async function poll(){if(demo||polling||document.hidden)return;polling=true;try{const latest=await request('/api/status');if(latest.state==='error'&&status.error!==latest.error)toast(latest.error||'Playback failed');status=latest;connection(true,status.robot_connected);}catch(e){connection(false,false);}finally{polling=false;}}
   async function action(path, confirm=false, successMessage=''){if(busy)return;busy=true;renderPlayer();renderMotions();try{if(demo){status={...status,state:path.includes('/api/motions/')?'complete':path.endsWith('pause')?'paused':path.endsWith('reset')?'idle':'playing',routine_id:selected?.id};}else status=await request(path,'POST','{}',{'Content-Type':'application/json',...(confirm?{'X-G1-Safety-Confirmed':'YES'}:{})});connection(true,status.robot_connected);log('Playback: '+status.state);if(successMessage)toast(successMessage);}catch(e){toast(e.message);}finally{busy=false;renderPlayer();renderMotions();}}
   async function connectRobot(){
@@ -65,7 +65,8 @@
     catch(e){connection(connected,false);toast('Robot connection failed: '+e.message);}
     finally{robotBusy=false;connection(connected,status.robot_connected);}
   }
-  function openSettings(){$('address').value=address;$('settings-dialog').showModal();}
+  function setAudioOutput(value){audioOutput=value;const input=document.querySelector('input[name="audio-output"][value="'+value+'"]');if(input)input.checked=true;}
+  function openSettings(){$('address').value=address;setAudioOutput(audioOutput);$('settings-dialog').showModal();}
   function openDanceConfirm(){pendingMotion=null;$('confirm-heading').textContent='Start this dance?';$('confirm-copy').textContent='Make sure the robot has space and the physical E-stop is ready.';$('confirm-action').textContent='Start dance';$('confirm-dialog').showModal();}
   function openMotionConfirm(motion){pendingMotion=motion;$('confirm-heading').textContent='Start '+motion.name+'?';$('confirm-copy').textContent='Make sure the robot has space and the physical E-stop is ready.';$('confirm-action').textContent='Start motion';$('confirm-dialog').showModal();}
   $('menu').onclick=openSettings;$('settings-nav').onclick=openSettings;$('empty-settings').onclick=openSettings;document.querySelectorAll('[data-connect-robot]').forEach(button=>button.onclick=connectRobot);
@@ -73,7 +74,7 @@
   $('refresh').onclick=refresh;$('search').oninput=renderCards;
   document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(c=>c.classList.toggle('selected',c===b));renderCards();});
   document.querySelectorAll('.close').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-  $('settings-form').onsubmit=e=>{e.preventDefault();try{const u=new URL($('address').value);if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.search||u.hash)throw Error('Enter an HTTP address');if(!native&&u.origin!==location.origin){location.assign(u.origin);return;}address=u.origin;localStorage.setItem('g1.address',address);$('settings-dialog').close();refresh();}catch(e){toast(e.message);}};
+  $('settings-form').onsubmit=async e=>{e.preventDefault();try{const u=new URL($('address').value);if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.search||u.hash)throw Error('Enter an HTTP address');if(!native&&u.origin!==location.origin){location.assign(u.origin);return;}address=u.origin;localStorage.setItem('g1.address',address);const chosen=document.querySelector('input[name="audio-output"]:checked').value;if(!demo)await request('/api/settings/audio-output','PUT',JSON.stringify({audio_output:chosen}),{'Content-Type':'application/json'});setAudioOutput(chosen);localStorage.setItem('g1.audio-output',chosen);$('settings-dialog').close();refresh();}catch(e){toast(e.message);}};
   $('toggle').onclick=()=>{if(status.state==='playing')action('/api/pause');else if(status.state==='paused')action('/api/resume');else openDanceConfirm();};
   $('stop').onclick=()=>action('/api/reset');$('confirm-action').onclick=()=>{const motion=pendingMotion;pendingMotion=null;$('confirm-dialog').close();if(motion)action('/api/motions/'+encodeURIComponent(motion.id)+'/play',true,motion.name+(demo?' simulated.':' started.'));else action('/api/routines/'+encodeURIComponent(selected.id)+'/play',true);};
   $('edit').onclick=()=>{$('track-heading').textContent=selected.song_title||selected.name;$('detail-art').src=art(selected);$('track-dialog').showModal();};

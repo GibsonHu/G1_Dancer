@@ -49,7 +49,7 @@ class ServerTests(unittest.TestCase):
         self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
         self.request('PUT', '/api/routines/test/audio', b'ID3test', {'X-Song-Title':'My%20song'})
         self.assertEqual(json.load(self.request('GET', '/api/routines'))['routines'][0]['song_title'], 'My song')
-        cover = (Path(__file__).parents[1] / 'g1_dancer/assets/app_icon.png').read_bytes()
+        cover = (Path(__file__).parents[1] / 'desktop_app/assets/app_icon.png').read_bytes()
         self.request('PUT', '/api/routines/test/artwork', cover)
         self.assertEqual(self.request('GET', '/api/routines/test/artwork').read(), cover)
         with self.assertRaises(HTTPError):
@@ -78,6 +78,17 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(reset["state"], "idle")
         music = self.request("POST", "/api/routines/test/music", b"{}")
         self.assertEqual(music.status, 202)
+
+    def test_audio_output_setting(self):
+        self.assertEqual(json.load(self.request("GET", "/api/settings"))["audio_output"], "bluetooth")
+        response = json.load(self.request(
+            "PUT", "/api/settings/audio-output", b'{"audio_output":"usb"}',
+            {"Content-Type": "application/json"},
+        ))
+        self.assertEqual(response["audio_output"], "usb")
+        self.assertEqual(json.load(self.request("GET", "/api/settings"))["audio_output"], "usb")
+        with self.assertRaises(HTTPError):
+            self.request("PUT", "/api/settings/audio-output", b'{"audio_output":"headphones"}')
 
     def test_preset_motion_list_and_safety_confirmation(self):
         motions = json.load(self.request("GET", "/api/motions"))["motions"]

@@ -6,7 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Dict
 
-from .remote import RemoteClient
+from g1_dancer.remote import RemoteClient
 
 
 def launch(url: str, ssh_target: str, ssh_port: int) -> None:

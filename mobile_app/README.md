@@ -1,13 +1,13 @@
 # G1 DANCER — shared desktop, Android and iPhone experience
 
-The responsive HTML/CSS/JavaScript interface in `../g1_dancer/web/` runs in desktop browsers and in native Capacitor 7 Android/iOS shells. No cloud, CDN, Spotify login or subscription is involved. All UI assets are bundled. Songs play on the **development PC's speaker**, not the phone. Files selected from cloud storage must be downloaded onto your phone before joining the offline hotspot.
+The responsive HTML/CSS/JavaScript interface in `../desktop_app/web/` runs in desktop browsers and in native Capacitor 7 Android/iOS shells. No cloud, CDN, Spotify login or subscription is involved. All UI assets are bundled. Songs play on the **development PC's speaker**, not the phone. Files selected from cloud storage must be downloaded onto your phone before joining the offline hotspot.
 
 ## Try it on this Mac
 
 From the repository root:
 
 ```sh
-/Users/110663/miniconda3/bin/python -m g1_dancer.preview
+PYTHONPATH=src /Users/110663/miniconda3/bin/python -m g1_dancer.preview
 ```
 
 This opens `http://127.0.0.1:8788/?demo`: six sample tiles and simulated transport controls, with no robot connection. Remove `?demo` to try actual uploads against a temporary dry-run backend. Audio is simulated in dry-run; preview data disappears when the server exits. Ctrl-C stops the preview. This explicit Python path avoids the broken Homebrew Python launcher on this Mac.
@@ -74,4 +74,4 @@ cd android
 
 APK output: `android/app/build/outputs/apk/debug/app-debug.apk`. Native assets are generated from the shared source by `npm run sync`; do not edit `www/` or native `public/` copies directly.
 
-Backend tests from repository root: `python -m unittest discover -s tests -v`. With the safe preview running on port 8788, run `npx playwright test` in this folder. The included configuration uses this Mac's installed Chrome; change `executablePath` for another machine. These test desktop/mobile-width layouts, settings, search, simulated transport and real dry-run upload endpoints. Native device, Bluetooth, physical robot and iOS WebView tests still require the corresponding hardware/toolchain.
+Backend tests from repository root: `PYTHONPATH=src python -m unittest discover -s tests -v`. With the safe preview running on port 8788, run `npx playwright test` in this folder. The included configuration uses this Mac's installed Chrome; change `executablePath` for another machine. These test desktop/mobile-width layouts, settings, search, simulated transport and real dry-run upload endpoints. Native device, Bluetooth, physical robot and iOS WebView tests still require the corresponding hardware/toolchain.

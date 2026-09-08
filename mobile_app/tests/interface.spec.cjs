@@ -6,9 +6,10 @@ for (const [name, width, height] of [['desktop',1440,1000],['phone',390,844]]) {
     await page.goto('/?demo');
     await expect(page.locator('.tile')).toHaveCount(6);
     await page.getByRole('button',{name:'Select Electric soul',exact:true}).click();
-    await page.getByRole('button',{name:'Play music',exact:true}).click();
-    await page.getByRole('button',{name:'Pause playback',exact:true}).click();
-    await expect(page.getByRole('button',{name:'Resume playback',exact:true})).toBeEnabled();
+    await page.getByRole('button',{name:'Start dance',exact:true}).click();
+    await page.locator('#confirm-action').click();
+    await page.getByRole('button',{name:'Pause dance',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Resume dance',exact:true})).toBeEnabled();
     await page.locator('#stop').click();
     await page.locator('#menu').click();
     await expect(page.locator('#settings-dialog')).toBeVisible();
@@ -21,20 +22,23 @@ for (const [name, width, height] of [['desktop',1440,1000],['phone',390,844]]) {
     expect(errors).toEqual([]);
   });
 }
-test('real API: upload song and cover, music-only request', async ({page})=>{
+test('real API: upload song and cover, dance request', async ({page})=>{
   await page.goto('/');
   await expect(page.locator('.tile')).toHaveCount(2);
+  const connect=page.locator('[data-connect-robot]:visible');
+  if(await connect.isEnabled())await connect.click();
+  await expect(page.locator('[data-robot-status]:visible')).toContainText('Robot online');
   await page.locator('#edit').click();
   await page.locator('#song-file').setInputFiles({name:'My track.mp3',mimeType:'audio/mpeg',buffer:Buffer.from('ID3test-data')});
   await expect(page.locator('#track-dialog')).not.toBeVisible();
   await expect(page.locator('#now-title')).toHaveText('My track');
   await page.locator('#edit').click();
-  await page.locator('#cover-file').setInputFiles('../g1_dancer/assets/app_icon.png');
+  await page.locator('#cover-file').setInputFiles('../desktop_app/assets/app_icon.png');
   await expect(page.locator('#track-dialog')).not.toBeVisible();
-  const response = page.waitForResponse(r=>r.url().endsWith('/music') && r.request().method()==='POST');
-  await page.getByRole('button',{name:'Play music',exact:true}).click();
+  const response = page.waitForResponse(r=>r.url().endsWith('/play') && r.request().method()==='POST');
+  await page.getByRole('button',{name:'Start dance',exact:true}).click();
+  await page.locator('#confirm-action').click();
   expect((await response).status()).toBe(202);
-  // Dry-run has no audio process, so it completes immediately. Transport
-  // state transitions are exercised in the simulated desktop/phone tests.
-  await expect(page.getByRole('button',{name:'Play music',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Pause dance',exact:true})).toBeEnabled();
+  await page.locator('#stop').click();
 });

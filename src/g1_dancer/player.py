@@ -48,6 +48,13 @@ class RoutinePlayer:
         self.robot.initialize()
         return self.status()
 
+    def set_audio(self, audio) -> None:
+        with self._lock:
+            if self._status.state in {"playing", "paused"}:
+                raise BusyError("Stop playback before changing the audio output")
+            previous, self.audio = self.audio, audio
+        previous.stop()
+
     def play(self, routine: Routine, *, background: bool = True) -> None:
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
@@ -165,6 +172,8 @@ class RoutinePlayer:
                 self._wait_while_paused()
                 if self._cancel.wait(0.1):
                     return
+            if self.audio.error:
+                raise RuntimeError(self.audio.error)
             with self._lock:
                 if not self._cancel.is_set():
                     self._status.state = "complete"
@@ -185,6 +194,8 @@ class RoutinePlayer:
                 self._wait_while_paused()
                 if self._cancel.wait(0.1):
                     return
+            if self.audio.error:
+                raise RuntimeError(self.audio.error)
             with self._lock:
                 if not self._cancel.is_set():
                     self._status.state = "complete"
