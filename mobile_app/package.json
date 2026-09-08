@@ -1,0 +1,19 @@
+{
+  "name": "g1-dancer-mobile",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "sync": "node sync-web.mjs && cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.6.9",
+    "@capacitor/core": "7.6.9",
+    "@capacitor/ios": "7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.9",
+    "@playwright/test": "1.63.0"
+  }
+}

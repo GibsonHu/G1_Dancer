@@ -1,0 +1,7 @@
+{
+  "appId": "com.gibson.g1dancer",
+  "appName": "G1 DANCER",
+  "webDir": "www",
+  "server": {"androidScheme": "http", "cleartext": true},
+  "ios": {"contentInset": "always"}
+}

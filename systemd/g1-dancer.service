@@ -1,0 +1,14 @@
+[Unit]
+Description=Offline Unitree G1 dance controller
+After=network-online.target bluetooth.target sound.target
+Wants=network-online.target bluetooth.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/g1-dancer serve
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+

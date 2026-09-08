@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "g1-dancer"
+version = "0.1.0"
+description = "Offline dance and audio controller for a Unitree G1 development PC"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+g1-dancer = "g1_dancer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["g1_dancer*"]
+
+[tool.setuptools.package-data]
+g1_dancer = ["assets/*.png", "web/*"]

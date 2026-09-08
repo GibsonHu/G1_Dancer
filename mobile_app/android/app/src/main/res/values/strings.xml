@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">G1 DANCER</string>
+    <string name="title_activity_main">G1 DANCER</string>
+    <string name="package_name">com.gibson.g1dancer</string>
+    <string name="custom_url_scheme">com.gibson.g1dancer</string>
+</resources>
