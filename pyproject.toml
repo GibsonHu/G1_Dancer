@@ -9,6 +9,11 @@ description = "Offline dance and audio controller for a Unitree G1 development P
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+robot = [
+    "unitree-sdk2py @ git+https://github.com/unitreerobotics/unitree_sdk2_python.git@65691c8a8bc53b98d3976dba4dbf9d5d20b2e7f5",
+]
+
 [project.scripts]
 g1-dancer = "g1_dancer.cli:main"
 
