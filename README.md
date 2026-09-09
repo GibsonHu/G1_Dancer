@@ -4,10 +4,10 @@ G1 Dancer plays music and starts saved G1 dance routines from a browser, desktop
 
 ## Robot development PC setup
 
-The development PC stays connected to the G1 by Ethernet and runs the controller service. Install this project with its `robot` extra while the PC has internet access. The extra installs a pinned revision of Unitree's official Python SDK directly from its GitHub repository.
+The development PC stays connected to the G1 by Ethernet and runs the controller service. The official Unitree Python SDK is included in this repository, so install this project while the PC has internet access to fetch its CycloneDDS, NumPy, and OpenCV requirements.
 
 ```bash
-python3 -m pip install --user '.[robot]'
+python3 -m pip install --user .
 g1-dancer init --interface eth0
 g1-dancer serve
 ```

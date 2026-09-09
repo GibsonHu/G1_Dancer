@@ -7,22 +7,81 @@ name = "g1-dancer"
 version = "0.1.0"
 description = "Offline dance and audio controller for a Unitree G1 development PC"
 requires-python = ">=3.10"
-dependencies = []
-
-[project.optional-dependencies]
-robot = [
-    "unitree-sdk2py @ git+https://github.com/unitreerobotics/unitree_sdk2_python.git@65691c8a8bc53b98d3976dba4dbf9d5d20b2e7f5",
+dependencies = [
+    "cyclonedds==0.10.2",
+    "numpy",
+    "opencv-python",
 ]
 
 [project.scripts]
 g1-dancer = "g1_dancer.cli:main"
 
 [tool.setuptools]
-packages = ["g1_dancer", "desktop_app"]
+packages = [
+    "g1_dancer",
+    "desktop_app",
+    "unitree_sdk2py",
+    "unitree_sdk2py.idl",
+    "unitree_sdk2py.b2",
+    "unitree_sdk2py.core",
+    "unitree_sdk2py.h2",
+    "unitree_sdk2py.g1",
+    "unitree_sdk2py.a2",
+    "unitree_sdk2py.as2",
+    "unitree_sdk2py.comm",
+    "unitree_sdk2py.utils",
+    "unitree_sdk2py.h1",
+    "unitree_sdk2py.rpc",
+    "unitree_sdk2py.go2",
+    "unitree_sdk2py.idl.std_msgs",
+    "unitree_sdk2py.idl.unitree_hg",
+    "unitree_sdk2py.idl.nav_msgs",
+    "unitree_sdk2py.idl.geometry_msgs",
+    "unitree_sdk2py.idl.sensor_msgs",
+    "unitree_sdk2py.idl.unitree_api",
+    "unitree_sdk2py.idl.unitree_go",
+    "unitree_sdk2py.idl.builtin_interfaces",
+    "unitree_sdk2py.idl.std_msgs.msg",
+    "unitree_sdk2py.idl.std_msgs.msg.dds_",
+    "unitree_sdk2py.idl.unitree_hg.msg",
+    "unitree_sdk2py.idl.unitree_hg.msg.dds_",
+    "unitree_sdk2py.idl.nav_msgs.msg",
+    "unitree_sdk2py.idl.nav_msgs.msg.dds_",
+    "unitree_sdk2py.idl.geometry_msgs.msg",
+    "unitree_sdk2py.idl.geometry_msgs.msg.dds_",
+    "unitree_sdk2py.idl.sensor_msgs.msg",
+    "unitree_sdk2py.idl.sensor_msgs.msg.dds_",
+    "unitree_sdk2py.idl.sensor_msgs.msg.dds_.PointField_Constants",
+    "unitree_sdk2py.idl.unitree_api.msg",
+    "unitree_sdk2py.idl.unitree_api.msg.dds_",
+    "unitree_sdk2py.idl.unitree_go.msg",
+    "unitree_sdk2py.idl.unitree_go.msg.dds_",
+    "unitree_sdk2py.idl.builtin_interfaces.msg",
+    "unitree_sdk2py.idl.builtin_interfaces.msg.dds_",
+    "unitree_sdk2py.b2.back_video",
+    "unitree_sdk2py.b2.sport",
+    "unitree_sdk2py.b2.front_video",
+    "unitree_sdk2py.b2.robot_state",
+    "unitree_sdk2py.b2.vui",
+    "unitree_sdk2py.h2.loco",
+    "unitree_sdk2py.g1.audio",
+    "unitree_sdk2py.g1.arm",
+    "unitree_sdk2py.g1.loco",
+    "unitree_sdk2py.a2.sport",
+    "unitree_sdk2py.a2.audio",
+    "unitree_sdk2py.comm.motion_switcher",
+    "unitree_sdk2py.h1.loco",
+    "unitree_sdk2py.go2.video",
+    "unitree_sdk2py.go2.obstacles_avoid",
+    "unitree_sdk2py.go2.sport",
+    "unitree_sdk2py.go2.robot_state",
+    "unitree_sdk2py.go2.vui",
+]
 
 [tool.setuptools.package-dir]
 g1_dancer = "src/g1_dancer"
 desktop_app = "desktop_app"
+unitree_sdk2py = "src/unitree_sdk2py"
 
 [tool.setuptools.package-data]
 desktop_app = ["assets/*.png", "web/*"]
