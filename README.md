@@ -14,6 +14,13 @@ g1-dancer serve
 
 Replace `eth0` with the Ethernet interface connected to the robot. This creates the config at `~/.config/g1-dancer/config.yaml` and sample dances at `~/.local/share/g1-dancer/routines`.
 
+When the Dance Library is opened against a real robot, the service also calls
+`GetMimicMotion()` and adds every robot-installed whole-body motion to the
+library. These entries are cached in `mimic_motions.json` under the data
+directory, allowing later `--dry-run` sessions to display and simulate the same
+catalog. Mimic motions require the robot to be standing stably and are invoked
+through Unitree's `550xxx` FSM IDs.
+
 The default service address is `http://10.42.0.1:8787`. To start it automatically after login:
 
 ```bash

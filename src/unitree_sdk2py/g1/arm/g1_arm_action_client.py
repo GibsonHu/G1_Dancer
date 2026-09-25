@@ -37,6 +37,8 @@ class G1ArmActionClient(Client):
         # regist api
         self._RegistApi(ROBOT_API_ID_ARM_ACTION_EXECUTE_ACTION, 0)
         self._RegistApi(ROBOT_API_ID_ARM_ACTION_GET_ACTION_LIST, 0)
+        self._RegistApi(ROBOT_API_ID_ARM_ACTION_EXECUTE_CUSTOM_ACTION, 0)
+        self._RegistApi(ROBOT_API_ID_ARM_ACTION_STOP_CUSTOM_ACTION, 0)
 
     ## API Call ##
     def ExecuteAction(self, action_id: int):
@@ -54,3 +56,8 @@ class G1ArmActionClient(Client):
             return code, json.loads(data)
         else:
             return code, None
+
+    def StopCustomAction(self):
+        """Stop a recorded custom arm action and return the SDK result code."""
+        code, data = self._Call(ROBOT_API_ID_ARM_ACTION_STOP_CUSTOM_ACTION, "{}")
+        return code

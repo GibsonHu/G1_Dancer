@@ -17,7 +17,7 @@ class Config:
     dry_run: bool = False
     max_upload_mb: int = 100
     audio_player: str = "auto"
-    audio_output: str = "bluetooth"
+    audio_output: str = "browser"
 
     @property
     def root(self) -> Path:

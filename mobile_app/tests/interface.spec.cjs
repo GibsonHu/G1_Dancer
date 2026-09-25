@@ -4,7 +4,20 @@ for (const [name, width, height] of [['desktop',1440,1000],['phone',390,844]]) {
     await page.setViewportSize({width,height});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.goto('/?demo');
-    await expect(page.locator('.tile')).toHaveCount(6);
+    await expect(page.locator('#cards .tile')).toHaveCount(3);
+    await expect(page.locator('#utility-library-cards .tile')).toHaveCount(1);
+    await expect(page.locator('#motion-library + #utility-library')).toBeAttached();
+    await page.locator('[data-utility-filter="utility"]').click();
+    await expect(page.locator('#utility-library-cards .tile')).toHaveCount(0);
+    await expect(page.locator('#utility-library-empty')).toBeVisible();
+    await page.locator('[data-utility-filter="recovery"]').click();
+    await expect(page.locator('#utility-library-cards .tile')).toHaveCount(1);
+    await page.locator('[data-utility-filter="all"]').click();
+    await expect(page.locator('#motion-library-cards .tile')).toHaveCount(18);
+    await page.getByRole('button',{name:'Greetings',exact:true}).click();
+    await expect(page.locator('#cards .tile')).toHaveCount(1);
+    await page.getByRole('button',{name:'All mimics',exact:true}).click();
+    await expect(page.locator('#cards .tile')).toHaveCount(3);
     await page.getByRole('button',{name:'Select Electric soul',exact:true}).click();
     await page.getByRole('button',{name:'Start dance',exact:true}).click();
     await page.locator('#confirm-action').click();
@@ -15,7 +28,8 @@ for (const [name, width, height] of [['desktop',1440,1000],['phone',390,844]]) {
     await expect(page.locator('#settings-dialog')).toBeVisible();
     await page.locator('#settings-dialog .close').click();
     await page.locator('#search').fill('Neon');
-    await expect(page.locator('.tile')).toHaveCount(1);
+    await expect(page.locator('#cards .tile')).toHaveCount(0);
+    await expect(page.locator('#motion-library-cards .tile')).toHaveCount(1);
     await page.locator('#search').fill('');
     await page.screenshot({path:'test-results/'+name+'.png',fullPage:true});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
@@ -24,7 +38,8 @@ for (const [name, width, height] of [['desktop',1440,1000],['phone',390,844]]) {
 }
 test('real API: upload song and cover, dance request', async ({page})=>{
   await page.goto('/');
-  await expect(page.locator('.tile')).toHaveCount(2);
+  await expect(page.locator('#cards .tile')).toHaveCount(1);
+  await expect(page.locator('#motion-library-cards .tile')).toHaveCount(17);
   const connect=page.locator('[data-connect-robot]:visible');
   if(await connect.isEnabled())await connect.click();
   await expect(page.locator('[data-robot-status]:visible')).toContainText('Robot online');

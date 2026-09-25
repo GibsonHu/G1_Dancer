@@ -66,6 +66,29 @@ class AudioPlayer:
         return None
 
 
+class BrowserAudioPlayer:
+    """Audio is played by the web client; the controller must stay silent."""
+    def play(self, path: Path) -> None:
+        if not path.is_file():
+            raise AudioError(f"Audio file is missing: {path}")
+
+    def stop(self) -> None:
+        pass
+
+    def pause(self) -> None:
+        pass
+
+    def resume(self) -> None:
+        pass
+
+    def is_playing(self) -> bool:
+        return False
+
+    @property
+    def error(self) -> Optional[str]:
+        return None
+
+
 class UnitreeAudioPlayer:
     """Stream decoded 16 kHz mono PCM to the G1 AudioClient."""
 
@@ -177,4 +200,6 @@ def create_audio_player(output: str, preference: str, network_interface: str, dr
         return UnitreeAudioPlayer(network_interface, dry_run)
     if output in {"bluetooth", "usb"}:
         return AudioPlayer(preference, dry_run)
-    raise AudioError("audio_output must be one of: unitree, bluetooth, usb")
+    if output == "browser":
+        return BrowserAudioPlayer()
+    raise AudioError("audio_output must be one of: unitree, bluetooth, usb, browser")

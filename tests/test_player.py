@@ -52,6 +52,30 @@ class PlayerTests(unittest.TestCase):
             self.assertEqual(player.status()["motion_id"], "high-five")
             self.assertEqual(robot.log, [{"type": "arm_action", "action_id": 18}])
 
+    def test_mimic_motion_uses_prefixed_fsm_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = RoutineStore(Path(directory))
+            robot = G1Robot("unused", dry_run=True)
+            player = RoutinePlayer(store, robot, AudioPlayer(dry_run=True))
+            player.play_mimic_motion("mimic-502", 502, 0)
+            player._thread.join(timeout=1)
+            self.assertEqual(player.status()["state"], "complete")
+            self.assertEqual(player.status()["routine_id"], "mimic-502")
+            self.assertEqual(robot.log, [{
+                "type": "mimic_motion", "motion_id": 502, "fsm_id": 550502,
+            }])
+
+    def test_stop_exits_mimic_without_damping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = RoutineStore(Path(directory))
+            robot = G1Robot("unused", dry_run=True)
+            player = RoutinePlayer(store, robot, AudioPlayer(dry_run=True))
+            player.play_mimic_motion("mimic-502", 502, 30)
+            player.stop()
+            self.assertEqual(player.status()["state"], "stopped")
+            self.assertEqual(robot.log[-1], {"type": "stop_mimic_motion", "fsm_id": 500})
+            self.assertNotIn({"type": "emergency_stop", "fsm_id": 1}, robot.log)
+
 
 if __name__ == "__main__":
     unittest.main()

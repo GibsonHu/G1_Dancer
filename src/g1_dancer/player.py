@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .audio import AudioPlayer
@@ -48,6 +49,39 @@ class RoutinePlayer:
         self.robot.initialize()
         return self.status()
 
+    def walk_run(self) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Stop playback before enabling Walk / Run mode")
+        self.robot.walk_run()
+
+    def run_mode(self) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Stop playback before enabling Run Mode")
+        self.robot.run_mode()
+
+    def ready_mode(self) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Stop playback before enabling Ready Mode")
+        self.robot.ready_mode()
+
+    def damped_mode(self) -> None:
+        self._cancel.set()
+        self._pause.clear()
+        self.audio.stop()
+        try:
+            self.robot.damped_mode()
+        finally:
+            with self._lock:
+                self._status = PlaybackStatus("stopped")
+                self._robot_active = False
+
+    def emergency_stop(self) -> None:
+        """Compatibility alias for Damped Mode."""
+        self.damped_mode()
+
     def set_audio(self, audio) -> None:
         with self._lock:
             if self._status.state in {"playing", "paused"}:
@@ -75,17 +109,37 @@ class RoutinePlayer:
     def play_music(self, routine: Routine) -> None:
         if not routine.audio:
             raise RuntimeError(f"Dance '{routine.name}' has no MP3 attached")
+        self.play_audio(routine.id, self.store.audio_dir / routine.audio)
+
+    def play_audio(self, action_id: str, path: Path) -> None:
+        """Play an action's attached track without initializing or stopping the robot."""
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 raise BusyError("Another routine or song is already playing")
             self._cancel.clear()
             self._pause.clear()
             self._robot_active = False
-            self._status = PlaybackStatus("playing", routine.id, time.time(), None)
-            self._thread = threading.Thread(target=self._run_music, args=(routine,), daemon=True)
+            self._status = PlaybackStatus("playing", action_id, time.time(), None)
+            self._thread = threading.Thread(target=self._run_audio, args=(path,), daemon=True)
             self._thread.start()
 
-    def play_motion(self, motion_id: str, action_id: int) -> None:
+    def track_external_action(self, action_id: str) -> None:
+        """Track a UniStore action without starting local audio or robot control."""
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Another routine or song is already playing")
+            self._cancel.clear()
+            self._pause.clear()
+            self._robot_active = False
+            self._status = PlaybackStatus("playing", action_id, time.time(), None)
+
+    def ensure_idle(self) -> None:
+        """Fail before dispatching an external action whose song cannot start."""
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Another routine or song is already playing")
+
+    def play_motion(self, motion_id: str, action_id: int, audio_path: Optional[Path] = None) -> None:
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 raise BusyError("Another routine or motion is already playing")
@@ -96,7 +150,23 @@ class RoutinePlayer:
                 state="playing", started_at=time.time(), motion_id=motion_id
             )
             self._thread = threading.Thread(
-                target=self._run_motion, args=(action_id,), daemon=True
+                target=self._run_motion, args=(action_id, audio_path), daemon=True
+            )
+            self._thread.start()
+
+    def play_mimic_motion(self, routine_id: str, motion_id: int, duration: float,
+                          audio_path: Optional[Path] = None) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Another routine or motion is already playing")
+            self._cancel.clear()
+            self._pause.clear()
+            self._robot_active = True
+            self._status = PlaybackStatus(
+                state="playing", routine_id=routine_id, started_at=time.time(), motion_id=routine_id
+            )
+            self._thread = threading.Thread(
+                target=self._run_mimic_motion, args=(motion_id, duration, audio_path), daemon=True
             )
             self._thread.start()
 
@@ -104,16 +174,34 @@ class RoutinePlayer:
         self._cancel.set()
         self._pause.clear()
         self.audio.stop()
+        with self._lock:
+            exit_mimic = (self._status.motion_id or "").startswith("mimic-")
+            robot_active = self._robot_active
         try:
-            self.robot.stop()
+            # A note-button request is audio-only: stopping its song must never
+            # issue an unrelated robot command.
+            if robot_active:
+                self.robot.stop(exit_mimic=exit_mimic)
         finally:
             with self._lock:
                 self._status.state = "stopped"
+                self._robot_active = False
+
+    def stop_audio_only(self) -> None:
+        """Clear an audio-only playback record without issuing a robot command."""
+        self._cancel.set()
+        self._pause.clear()
+        self.audio.stop()
+        with self._lock:
+            self._status = PlaybackStatus("stopped")
+            self._robot_active = False
 
     def pause(self) -> None:
         with self._lock:
             if self._status.state != "playing":
                 raise BusyError("No playing routine to pause")
+            if (self._status.motion_id or "").startswith("mimic-"):
+                raise BusyError("Robot mimic motions cannot be paused; use Stop")
             self._pause.set()
             self._status.state = "paused"
         self.audio.pause()
@@ -187,9 +275,9 @@ class RoutinePlayer:
                 self._status.state = "error"
                 self._status.error = str(exc)
 
-    def _run_music(self, routine: Routine) -> None:
+    def _run_audio(self, path: Path) -> None:
         try:
-            self.audio.play(self.store.audio_dir / routine.audio)  # type: ignore[arg-type]
+            self.audio.play(path)
             while self.audio.is_playing():
                 self._wait_while_paused()
                 if self._cancel.wait(0.1):
@@ -205,13 +293,46 @@ class RoutinePlayer:
                 self._status.state = "error"
                 self._status.error = str(exc)
 
-    def _run_motion(self, action_id: int) -> None:
+    def _run_motion(self, action_id: int, audio_path: Optional[Path]) -> None:
         try:
+            if audio_path:
+                self.audio.play(audio_path)
             self.robot.execute({"type": "arm_action", "action_id": action_id})
+            # Arm actions are asynchronous. Once dispatched, a later audio-only
+            # stop must not be treated as a robot stop request.
+            with self._lock:
+                self._robot_active = False
+            while self.audio.is_playing():
+                if self._cancel.wait(0.1):
+                    return
             with self._lock:
                 if not self._cancel.is_set():
                     self._status.state = "complete"
         except Exception as exc:
+            with self._lock:
+                self._status.state = "error"
+                self._status.error = str(exc)
+
+    def _run_mimic_motion(self, motion_id: int, duration: float, audio_path: Optional[Path]) -> None:
+        try:
+            if audio_path:
+                self.audio.play(audio_path)
+            self.robot.execute_mimic_motion(motion_id)
+            if self._cancel.wait(duration):
+                return
+            with self._lock:
+                self._robot_active = False
+            while self.audio.is_playing():
+                if self._cancel.wait(0.1):
+                    return
+            with self._lock:
+                if not self._cancel.is_set():
+                    self._status.state = "complete"
+        except Exception as exc:
+            try:
+                self.robot.stop()
+            except Exception:
+                pass
             with self._lock:
                 self._status.state = "error"
                 self._status.error = str(exc)

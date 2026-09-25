@@ -12,13 +12,17 @@ class Library:
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
 
-    def metadata(self, routine):
-        path = self.root / (routine.id + '.json')
+    def _key(self, item):
+        """Return a server-owned metadata key for a routine or another action."""
+        return item if isinstance(item, str) else item.id
+
+    def metadata(self, item):
+        path = self.root / (self._key(item) + '.json')
         with self.lock:
             return json.loads(path.read_text()) if path.exists() else {}
 
-    def update(self, routine, **values):
-        path = self.root / (routine.id + '.json')
+    def update(self, item, **values):
+        path = self.root / (self._key(item) + '.json')
         with self.lock:
             data = json.loads(path.read_text()) if path.exists() else {}
             data.update(values)
@@ -29,8 +33,12 @@ class Library:
     def public(self, routine):
         result = routine.public_dict()
         meta = self.metadata(routine)
-        result['song_title'] = meta.get('song_title', Path(routine.audio).stem if routine.audio else '')
+        # An audio filename is not the dance's display name. Keep those two
+        # choices independent so attaching an MP3 never renames an action.
+        result['song_title'] = meta.get('song_title', '')
+        result['audio_filename'] = meta.get('audio_filename') or (routine.name + '.mp3' if routine.audio else None)
         result['artwork_url'] = '/api/routines/' + routine.id + '/artwork?v=' + str(meta.get('revision', '0'))
+        result['video_url'] = '/api/routines/' + routine.id + '/video?v=' + str(meta.get('video_revision', '0')) if meta.get('video') else None
         return result
 
     def artwork(self, routine):

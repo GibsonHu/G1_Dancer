@@ -129,11 +129,11 @@ def main(argv: List[str] | None = None) -> int:
 
         if args.command == "speaker":
             if args.speaker_command == "scan":
-                print(bluetooth.scan(args.seconds))
+                print("\n".join(f"{device['address']} {device['name']}" for device in bluetooth.scan(args.seconds)) or "No devices found")
             elif args.speaker_command == "list":
-                print("\n".join(bluetooth.paired_devices()) or "No paired devices")
+                print("\n".join(f"{device['address']} {device['name']}" for device in bluetooth.paired_devices()) or "No paired devices")
             elif args.speaker_command == "connected":
-                print("\n".join(bluetooth.connected_devices()) or "No connected devices")
+                print("\n".join(f"{device['address']} {device['name']}" for device in bluetooth.connected_devices()) or "No connected devices")
             elif args.speaker_command == "pair":
                 print(bluetooth.pair(args.mac))
             else:

@@ -23,6 +23,7 @@ class LocoClient(Client):
         self._RegistApi(ROBOT_API_ID_LOCO_GET_STAND_HEIGHT, 0)
         self._RegistApi(ROBOT_API_ID_LOCO_GET_PHASE, 0) # deprecated
 
+        self._RegistApi(ROBOT_API_ID_LOCO_FSM_API, 0)
         self._RegistApi(ROBOT_API_ID_LOCO_SET_FSM_ID, 0)
         self._RegistApi(ROBOT_API_ID_LOCO_SET_BALANCE_MODE, 0)
         self._RegistApi(ROBOT_API_ID_LOCO_SET_SWING_HEIGHT, 0)
@@ -42,6 +43,26 @@ class LocoClient(Client):
             return code, None
         js = json.loads(data)
         return code, js.get("data")
+
+    def GetMimicMotion(self):
+        """Return the whole-body mimic motions installed on the robot."""
+        parameter = json.dumps({"fsm_id": 550, "api_id": 1})
+        code, data = self._Call(ROBOT_API_ID_LOCO_FSM_API, parameter)
+        if code != 0:
+            return code, None
+        try:
+            return code, json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            return code, None
+
+    def RunMimicMotion(self, motion_api_id: int):
+        if not isinstance(motion_api_id, int) or not 0 <= motion_api_id <= 999:
+            raise ValueError("Mimic motion id must be between 0 and 999")
+        return self.SetFsmId(550000 + motion_api_id)
+
+    def StopMimicMotion(self):
+        """Exit a 550xxx mimic motion through the normal Walk/Run FSM."""
+        return self.SetFsmId(500)
 
     # 7101
     def SetFsmId(self, fsm_id: int):
@@ -76,7 +97,7 @@ class LocoClient(Client):
         parameter = json.dumps(p)
         code, data = self._Call(ROBOT_API_ID_LOCO_SET_VELOCITY, parameter)
         return code
-    
+
     # 7106
     def SetTaskId(self, task_id: float):
         p = {}
@@ -168,4 +189,3 @@ class LocoClient(Client):
         else:
             self.first_shake_hand_stage_ = not self.first_shake_hand_stage_
             return self.SetTaskId(3 if self.first_shake_hand_stage_ else 2)
-    

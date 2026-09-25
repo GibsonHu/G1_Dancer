@@ -5,10 +5,10 @@ Wants=network-online.target bluetooth.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/g1-dancer serve
+WorkingDirectory=/home/unitree/Gibson/G1_Dancer
+ExecStart=/home/unitree/miniconda3/envs/g1_dancer/bin/python -m g1_dancer.cli serve
 Restart=on-failure
 RestartSec=3
 
 [Install]
 WantedBy=default.target
-
