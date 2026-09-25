@@ -270,7 +270,7 @@ class ServerTests(unittest.TestCase):
             "POST", "/api/robot/run-mode", b"{}", {"X-G1-Safety-Confirmed": "YES"},
         ))
         self.assertEqual(walk_run["state"], "idle")
-        self.assertEqual(self.player.robot.log[-1], {"type": "run_mode", "internal_control": 2, "fsm_id": 500})
+        self.assertEqual(self.player.robot.log[-1], {"type": "run_mode", "fsm_id": 500})
         stopped = json.load(self.request("POST", "/api/robot/damped-mode", b"{}"))
         self.assertEqual(stopped["state"], "stopped")
         self.assertEqual(self.player.robot.log[-1], {"type": "damped_mode", "fsm_id": 1})

@@ -132,15 +132,12 @@ class G1Robot:
             raise RobotError(f"Robot rejected mimic motion {motion_id} (SDK code {result})")
 
     def run_mode(self) -> None:
-        """Enable Unitree's internal Walk/Run controller, then enter FSM 500."""
+        """Enter Unitree's high-level locomotion (Start / FSM 500) mode."""
         self.initialize()
         if self.dry_run:
-            self.log.append({"type": "run_mode", "internal_control": 2, "fsm_id": 500})
+            self.log.append({"type": "run_mode", "fsm_id": 500})
             return
-        result = self._loco.SwitchToInternalCtrl(2)  # InternalFsmMode.WALKRUN
-        if result not in (None, 0):
-            raise RobotError(f"Robot rejected Run Mode controller switch (SDK code {result})")
-        result = self._loco.SetFsmId(500)
+        result = self._loco.Start()
         if result not in (None, 0):
             raise RobotError(f"Robot rejected Run Mode command (SDK code {result})")
         for _ in range(10):
@@ -181,6 +178,37 @@ class G1Robot:
         result = self._loco.SetFsmId(1)
         if result not in (None, 0):
             raise RobotError(f"Robot rejected Damped Mode command (SDK code {result})")
+
+    def teleop(self, vx: float, vy: float, omega: float, duration: float = 0.35) -> None:
+        """Send one short, bounded high-level locomotion command.
+
+        Callers must renew this while a control is held; releasing control uses
+        :meth:`stop_teleop`, so a dropped browser connection does not leave a
+        continuous drive command behind.
+        """
+        values = (vx, vy, omega, duration)
+        if any(not isinstance(value, (int, float)) or isinstance(value, bool) for value in values):
+            raise RobotError("Teleoperation values must be numbers")
+        if not -0.35 <= vx <= 0.35 or not -0.25 <= vy <= 0.25 or not -0.8 <= omega <= 0.8:
+            raise RobotError("Teleoperation speed is outside the allowed range")
+        if not 0.05 <= duration <= 0.5:
+            raise RobotError("Teleoperation duration is outside the allowed range")
+        self.initialize()
+        if self.dry_run:
+            self.log.append({"type": "teleop", "vx": vx, "vy": vy, "omega": omega, "duration": duration})
+            return
+        result = self._loco.SetVelocity(float(vx), float(vy), float(omega), float(duration))
+        if result not in (None, 0):
+            raise RobotError(f"Robot rejected teleoperation command (SDK code {result})")
+
+    def stop_teleop(self) -> None:
+        self.initialize()
+        if self.dry_run:
+            self.log.append({"type": "teleop_stop"})
+            return
+        result = self._loco.StopMove()
+        if result not in (None, 0):
+            raise RobotError(f"Robot rejected teleoperation stop (SDK code {result})")
 
     def emergency_stop(self) -> None:
         """Compatibility alias for the Damped Mode SDK command."""

@@ -358,6 +358,21 @@ def make_handler(config: Config, store: RoutineStore, player: RoutinePlayer, con
                 elif route == ("api", "robot", "damped-mode"):
                     player.damped_mode()
                     self._reply(200, player.status())
+                elif route == ("api", "robot", "teleop"):
+                    if self.headers.get("X-G1-Safety-Confirmed") != "YES":
+                        self._reply(428, {"error": "clear the area and send X-G1-Safety-Confirmed: YES"})
+                        return
+                    try:
+                        length = int(self.headers.get("Content-Length", "0"))
+                        body = json.loads(self.rfile.read(length) or b"{}")
+                    except (ValueError, json.JSONDecodeError):
+                        self._reply(400, {"error": "teleoperation request must be JSON"})
+                        return
+                    player.teleop(body.get("vx"), body.get("vy"), body.get("omega"), body.get("duration", 0.35))
+                    self._reply(200, player.status())
+                elif route == ("api", "robot", "teleop", "stop"):
+                    player.stop_teleop()
+                    self._reply(200, player.status())
                 elif route == ("api", "robot", "emergency-stop"):
                     player.emergency_stop()
                     self._reply(200, player.status())

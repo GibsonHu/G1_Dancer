@@ -67,6 +67,15 @@ class RoutinePlayer:
                 raise BusyError("Stop playback before enabling Ready Mode")
         self.robot.ready_mode()
 
+    def teleop(self, vx: float, vy: float, omega: float, duration: float = 0.35) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                raise BusyError("Stop playback before driving the robot")
+        self.robot.teleop(vx, vy, omega, duration)
+
+    def stop_teleop(self) -> None:
+        self.robot.stop_teleop()
+
     def damped_mode(self) -> None:
         self._cancel.set()
         self._pause.clear()
